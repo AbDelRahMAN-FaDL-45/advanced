@@ -31,7 +31,7 @@ class CustomerApp:
         self.create_widgets()
 
     def initialize_database(self):
-        with sqlite3.connect("hotel_management_system.db") as conn:
+        with sqlite3.connect("Hotel management system.db") as conn:
             cursor = conn.cursor()
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS customers(
@@ -129,7 +129,7 @@ class CustomerApp:
             messagebox.showerror("Error", "No customer selected to upload!")
             return
 
-        with sqlite3.connect("hotel_management_system.db") as conn:
+        with sqlite3.connect("Hotel management system.db") as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM customers WHERE Customer_id=?", (self.selected_customer_id,))
             data = cursor.fetchone()
@@ -146,7 +146,7 @@ class CustomerApp:
                 self.check_out_date.set(data[9])
 
     def fetch_data(self):
-        with sqlite3.connect("hotel management system.db") as conn:
+        with sqlite3.connect("Hotel management system.db") as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM customers")
             rows = cursor.fetchall()
@@ -180,7 +180,7 @@ class CustomerApp:
             messagebox.showerror("Error", "First Name and Last Name are required!")
             return
 
-        with sqlite3.connect("hotel_management_system.db") as conn:
+        with sqlite3.connect("Hotel management system.db") as conn:
             cursor = conn.cursor()
             cursor.execute("""
                 INSERT INTO customers (First_Name, Last_Name, phone, email, Room_Price, Total_Booking_Price, Room_Type, check_in_date, check_out_date)
@@ -207,7 +207,7 @@ class CustomerApp:
             messagebox.showerror("Error", "No customer selected to update!")
             return
 
-        with sqlite3.connect("hotel_management_system.db") as conn:
+        with sqlite3.connect("Hotel management system.db") as conn:
             cursor = conn.cursor()
             cursor.execute("""
                 UPDATE customers
