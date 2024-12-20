@@ -22,6 +22,7 @@ class AdminGUI:
 
         Button(search_frame, text="Search", command=self.search_customer, font=("Arial", 12), bg='#4CAF50', fg='white').place(x=400, y=30, width=100, height=30)
         Button(search_frame, text="Clear", command=self.clear_results, font=("Arial", 12), bg='#F44336', fg='white').place(x=520, y=30, width=100, height=30)
+        Button(search_frame, text="Delete", command=self.delete_customer, font=("Arial", 12), bg='#FF5722', fg='white').place(x=640, y=30, width=100, height=30)
 
         result_frame = LabelFrame(self.root, text="Customer Details", bg='#f0f8ff', fg='black', font=("Arial", 14))
         result_frame.place(x=20, y=200, width=840, height=450)
@@ -52,11 +53,11 @@ class AdminGUI:
 
         try:
             # Open the database connection (for Python 3.4 compatibility)
-            db = sqlite3.connect("hotel_management_system.db")
+            db = sqlite3.connect("Hotel management system.db")
             cursor = db.cursor()
 
             # Query customer information using the correct column name (Customer_id)
-            cursor.execute("""
+            cursor.execute(""" 
                 SELECT First_Name, Last_Name, Customer_id, phone, email, 
                        check_in_date, check_out_date, Room_Type, Room_Price, 
                        Total_Booking_Price
@@ -88,6 +89,41 @@ class AdminGUI:
             messagebox.showerror("Database Error", "Error fetching data: {}".format(str(e)))
         except Exception as e:
             messagebox.showerror("Error", "An error occurred: {}".format(str(e)))
+
+    def delete_customer(self):
+        """Delete a customer from the database by ID."""
+        customer_id = self.search_id.get()
+        if not customer_id:
+            messagebox.showerror("Error", "Please enter a Customer ID.")
+            return
+
+        confirm = messagebox.askyesno("Confirm Deletion", "Are you sure you want to delete customer with ID: {}".format(customer_id))
+        if confirm:
+            try:
+                # Open the database connection (for Python 3.4 compatibility)
+                db = sqlite3.connect("hotel_management_system.db")
+                cursor = db.cursor()
+
+                # Delete the customer from the database
+                cursor.execute(""" 
+                    DELETE FROM customers 
+                    WHERE Customer_id = ?
+                """, (customer_id,))
+
+                db.commit()
+
+                if cursor.rowcount > 0:
+                    messagebox.showinfo("Deleted", "Customer with ID {} has been deleted.".format(customer_id))
+                    self.clear_results()
+                else:
+                    messagebox.showinfo("Not Found", "No customer found with ID: {}".format(customer_id))
+
+                db.close()  # Close the database connection manually
+
+            except sqlite3.Error as e:
+                messagebox.showerror("Database Error", "Error deleting data: {}".format(str(e)))
+            except Exception as e:
+                messagebox.showerror("Error", "An error occurred: {}".format(str(e)))
 
     def clear_results(self):
         """Clear search results."""

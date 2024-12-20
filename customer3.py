@@ -1,14 +1,13 @@
-import sqlite3
 from tkinter import *
 from tkinter import ttk
 from tkinter import messagebox
-
+import sqlite3
 
 class CustomerApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Customer Management")
-        self.root.geometry("900x600")
+        self.root.geometry("900x700")
         self.root.configure(bg='lightblue')
 
         self.selected_customer_id = None
@@ -84,9 +83,10 @@ class CustomerApp:
 
         # Buttons
         Button(self.root, text="Add Customer", command=self.add_customer, bg='green').grid(row=10, column=0, padx=10, pady=5)
-        Button(self.root, text="Edit Customer", command=self.edit_customer, bg='orange').grid(row=10, column=1, padx=10, pady=5)
+        Button(self.root, text="Upload Customer", command=self.upload_customer, bg='orange').grid(row=10, column=1, padx=10, pady=5)
         Button(self.root, text="Update Customer", command=self.update_customer, bg='blue').grid(row=10, column=2, padx=10, pady=5)
         Button(self.root, text="Clear Fields", command=self.clear_fields, bg='gray').grid(row=10, column=3, padx=10, pady=5)
+        Button(self.root, text="Show Rooms", command=self.show_rooms, bg='purple').grid(row=10, column=4, padx=10, pady=5)
 
         # Customer Table
         self.customer_table = ttk.Treeview(
@@ -94,9 +94,9 @@ class CustomerApp:
             columns=("First_Name", "Last_Name", "Customer_id", "phone", "email", "Room_Price", "Total_Booking_Price", "Room_Type", "check_in_date", "check_out_date"),
             show="headings"
         )
-        self.customer_table.grid(row=11, column=0, columnspan=4, padx=10, pady=10)
+        self.customer_table.grid(row=11, column=0, columnspan=5, padx=10, pady=10)
 
-        # Table Column Configurations
+        # Configure customer table columns
         for col in self.customer_table["columns"]:
             self.customer_table.heading(col, text=col)
             self.customer_table.column(col, width=100)
@@ -107,8 +107,46 @@ class CustomerApp:
         # Load Data
         self.fetch_data()
 
-    def fetch_data(self):
+        # Room Table and Window
+        self.room_window = Toplevel(self.root)
+        self.room_window.title("Rooms")
+        self.room_window.geometry("600x400")
+        self.room_window.withdraw()  # Hide window initially
+
+        self.room_table = ttk.Treeview(self.room_window, columns=("Room No", "Type", "Price"), show="headings")
+        self.room_table.grid(row=0, column=0, columnspan=3, padx=10, pady=10)
+
+        # Configure room table columns
+        self.room_table.heading("Room No", text="Room No")
+        self.room_table.column("Room No", width=100)
+        self.room_table.heading("Type", text="Type")
+        self.room_table.column("Type", width=100)
+        self.room_table.heading("Price", text="Price")
+        self.room_table.column("Price", width=100)
+
+    def upload_customer(self):
+        if not self.selected_customer_id:
+            messagebox.showerror("Error", "No customer selected to upload!")
+            return
+
         with sqlite3.connect("hotel_management_system.db") as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM customers WHERE Customer_id=?", (self.selected_customer_id,))
+            data = cursor.fetchone()
+            if data:
+                self.First_Name.set(data[0])
+                self.Last_Name.set(data[1])
+                self.Customer_id.set(data[2])  # Show Customer ID (read-only)
+                self.phone.set(data[3])
+                self.email.set(data[4])
+                self.Room_Price.set(data[5])
+                self.Total_Booking_Price.set(data[6])
+                self.Room_Type.set(data[7])
+                self.check_in_date.set(data[8])
+                self.check_out_date.set(data[9])
+
+    def fetch_data(self):
+        with sqlite3.connect("hotel management system.db") as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM customers")
             rows = cursor.fetchall()
@@ -120,6 +158,22 @@ class CustomerApp:
             # Insert fetched data into table
             for row in rows:
                 self.customer_table.insert("", "end", values=row)
+
+    def select_customer(self, event):
+        selected_row = self.customer_table.focus()
+        data = self.customer_table.item(selected_row)["values"]
+        if data:
+            self.First_Name.set(data[0])
+            self.Last_Name.set(data[1])
+            self.Customer_id.set(data[2])
+            self.phone.set(data[3])
+            self.email.set(data[4])
+            self.Room_Price.set(data[5])
+            self.Total_Booking_Price.set(data[6])
+            self.Room_Type.set(data[7])
+            self.check_in_date.set(data[8])
+            self.check_out_date.set(data[9])
+            self.selected_customer_id = data[2]
 
     def add_customer(self):
         if not self.First_Name.get() or not self.Last_Name.get():
@@ -147,22 +201,6 @@ class CustomerApp:
         self.fetch_data()
         self.clear_fields()
         messagebox.showinfo("Success", "Customer added successfully!")
-
-    def select_customer(self, event):
-        selected_row = self.customer_table.focus()
-        data = self.customer_table.item(selected_row)["values"]
-        if data:
-            self.First_Name.set(data[0])
-            self.Last_Name.set(data[1])
-            self.Customer_id.set(data[2])  # Customer_id is now at index 2
-            self.phone.set(data[3])
-            self.email.set(data[4])
-            self.Room_Price.set(data[5])
-            self.Total_Booking_Price.set(data[6])
-            self.Room_Type.set(data[7])
-            self.check_in_date.set(data[8])
-            self.check_out_date.set(data[9])
-            self.selected_customer_id = data[2]  # Update selected_customer_id
 
     def update_customer(self):
         if not self.selected_customer_id:
@@ -193,15 +231,10 @@ class CustomerApp:
         self.clear_fields()
         messagebox.showinfo("Success", "Customer updated successfully!")
 
-    def edit_customer(self):
-        if not self.selected_customer_id:
-            messagebox.showerror("Error", "No customer selected to edit!")
-            return
-
     def clear_fields(self):
         self.First_Name.set("")
         self.Last_Name.set("")
-        self.Customer_id.set("")  # Clear Customer_id
+        self.Customer_id.set("")
         self.phone.set("")
         self.email.set("")
         self.Room_Price.set("")
@@ -211,8 +244,25 @@ class CustomerApp:
         self.check_out_date.set("")
         self.selected_customer_id = None
 
+    def show_rooms(self):
+        # Clear existing data in the room table
+        for row in self.room_table.get_children():
+            self.room_table.delete(row)
 
-if __name__ == "__main__":
-    root = Tk()
-    app = CustomerApp(root)
-    root.mainloop()
+        # Add room schedule data
+        rooms = [
+            {"Room No": 101, "Type": "Single", "Price": 50},
+            {"Room No": 102, "Type": "Double", "Price": 75},
+            {"Room No": 103, "Type": "Suite", "Price": 100}
+        ]
+
+        for room in rooms:
+            self.room_table.insert("", "end", values=(room["Room No"], room["Type"], room["Price"]))
+
+        # Show rooms window
+        self.room_window.deiconify()
+
+# Create root window and run the app
+root = Tk()
+app = CustomerApp(root)
+root.mainloop()
