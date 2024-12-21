@@ -2,6 +2,8 @@ from tkinter import *
 from tkinter import ttk
 from tkinter import messagebox
 import sqlite3
+import re
+from datetime import datetime
 
 class CustomerApp:
     def __init__(self, root):
@@ -89,18 +91,17 @@ class CustomerApp:
             ("Room Price:", self.Room_Price),
             ("Total Booking Price:", self.Total_Booking_Price),
             ("Room Type:", self.Room_Type),
-            ("Check-in Date:", self.check_in_date),
-            ("Check-out Date:", self.check_out_date)
+            ("Check-in Date (YYYY-MM-DD):", self.check_in_date),
+            ("Check-out Date (YYYY-MM-DD):", self.check_out_date)
         ]
 
         for i, (text, var) in enumerate(entries):
             Label(input_frame, text=text, bg=self.bg_color, font=('Helvetica', 10, 'bold')).grid(row=i//3, column=(i%3)*2, padx=10, pady=5, sticky='e')
             Entry(input_frame, textvariable=var, font=('Helvetica', 10), width=20).grid(row=i//3, column=(i%3)*2+1, padx=10, pady=5, sticky='w')
 
-        #  style buttons
+        # Modern styled buttons
         buttons = [
             ("Add Customer", self.add_customer),
-            ("Update Customer", self.update_customer),
             ("Clear Fields", self.clear_fields)
         ]
 
@@ -143,52 +144,94 @@ class CustomerApp:
         # Load initial data
         self.fetch_data()
 
-    # [Rest of the methods remain the same as in your original code]
-    def add_customer(self):
-        if not self.First_Name.get() or not self.Last_Name.get():
+    def validate_input(self):
+        # Name validation
+        if not self.First_Name.get().strip() or not self.Last_Name.get().strip():
             messagebox.showerror("Error", "First Name and Last Name are required!")
+            return False
+
+        if not all(c.isalpha() or c.isspace() for c in self.First_Name.get() + self.Last_Name.get()):
+            messagebox.showerror("Error", "Names should only contain letters and spaces!")
+            return False
+
+        # Phone validation
+        phone_pattern = re.compile(r'^\+?1?\d{9,15}$')
+        if not phone_pattern.match(self.phone.get().strip()):
+            messagebox.showerror("Error", "Invalid phone number! Please enter a valid phone number (9-15 digits).")
+            return False
+
+        # Email validation
+        email_pattern = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+        if not email_pattern.match(self.email.get().strip()):
+            messagebox.showerror("Error", "Invalid email address!")
+            return False
+
+        # Price validation
+        try:
+            room_price = float(self.Room_Price.get())
+            total_price = float(self.Total_Booking_Price.get())
+            if room_price <= 0 or total_price <= 0:
+                raise ValueError
+        except ValueError:
+            messagebox.showerror("Error", "Room Price and Total Booking Price must be valid positive numbers!")
+            return False
+
+        # Room Type validation
+        valid_room_types = ['Single', 'Double', 'Suite', 'Deluxe']
+        if self.Room_Type.get().strip().title() not in valid_room_types:
+            messagebox.showerror("Error", f"Invalid room type! Please choose from: {', '.join(valid_room_types)}")
+            return False
+
+        # Date validation
+        try:
+            check_in = datetime.strptime(self.check_in_date.get(), '%Y-%m-%d')
+            check_out = datetime.strptime(self.check_out_date.get(), '%Y-%m-%d')
+            
+            if check_in >= check_out:
+                messagebox.showerror("Error", "Check-out date must be after check-in date!")
+                return False
+            
+            if check_in < datetime.now():
+                messagebox.showerror("Error", "Check-in date cannot be in the past!")
+                return False
+            
+        except ValueError:
+            messagebox.showerror("Error", "Invalid date format! Please use YYYY-MM-DD format.")
+            return False
+
+        return True
+
+    def add_customer(self):
+        if not self.validate_input():
             return
 
-        with sqlite3.connect("Hotel management system.db") as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                INSERT INTO customers (First_Name, Last_Name, phone, email, Room_Price, 
-                                    Total_Booking_Price, Room_Type, check_in_date, check_out_date)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                self.First_Name.get(), self.Last_Name.get(), self.phone.get(),
-                self.email.get(), self.Room_Price.get(), self.Total_Booking_Price.get(),
-                self.Room_Type.get(), self.check_in_date.get(), self.check_out_date.get()
-            ))
-            conn.commit()
+        try:
+            with sqlite3.connect("Hotel management system.db") as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO customers (First_Name, Last_Name, phone, email, Room_Price, 
+                                        Total_Booking_Price, Room_Type, check_in_date, check_out_date)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    self.First_Name.get().strip(),
+                    self.Last_Name.get().strip(),
+                    self.phone.get().strip(),
+                    self.email.get().strip(),
+                    float(self.Room_Price.get()),
+                    float(self.Total_Booking_Price.get()),
+                    self.Room_Type.get().strip().title(),
+                    self.check_in_date.get(),
+                    self.check_out_date.get()
+                ))
+                conn.commit()
 
-        self.fetch_data()
-        self.clear_fields()
-        messagebox.showinfo("Success", "Customer added successfully!")
-
-    def update_customer(self):
-        if not self.selected_customer_id:
-            messagebox.showerror("Error", "No customer selected to update!")
-            return
-
-        with sqlite3.connect("Hotel management system.db") as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                UPDATE customers
-                SET First_Name=?, Last_Name=?, phone=?, email=?, Room_Price=?, 
-                    Total_Booking_Price=?, Room_Type=?, check_in_date=?, check_out_date=?
-                WHERE Customer_id=?
-            """, (
-                self.First_Name.get(), self.Last_Name.get(), self.phone.get(),
-                self.email.get(), self.Room_Price.get(), self.Total_Booking_Price.get(),
-                self.Room_Type.get(), self.check_in_date.get(), self.check_out_date.get(),
-                self.selected_customer_id
-            ))
-            conn.commit()
-
-        self.fetch_data()
-        self.clear_fields()
-        messagebox.showinfo("Success", "Customer updated successfully!")
+            self.fetch_data()
+            self.clear_fields()
+            messagebox.showinfo("Success", "Customer added successfully!")
+        except sqlite3.Error as e:
+            messagebox.showerror("Database Error", f"An error occurred: {str(e)}")
+        except Exception as e:
+            messagebox.showerror("Error", f"An unexpected error occurred: {str(e)}")
 
     def clear_fields(self):
         for var in [self.First_Name, self.Last_Name, self.Customer_id, self.phone,
@@ -198,14 +241,17 @@ class CustomerApp:
         self.selected_customer_id = None
 
     def fetch_data(self):
-        with sqlite3.connect("Hotel management system.db") as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM customers")
-            rows = cursor.fetchall()
+        try:
+            with sqlite3.connect("Hotel management system.db") as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM customers")
+                rows = cursor.fetchall()
 
-            self.customer_table.delete(*self.customer_table.get_children())
-            for row in rows:
-                self.customer_table.insert("", "end", values=row)
+                self.customer_table.delete(*self.customer_table.get_children())
+                for row in rows:
+                    self.customer_table.insert("", "end", values=row)
+        except sqlite3.Error as e:
+            messagebox.showerror("Database Error", f"An error occurred while fetching data: {str(e)}")
 
     def select_customer(self, event):
         selected_row = self.customer_table.focus()
