@@ -97,7 +97,7 @@ class CustomerApp:
             Label(input_frame, text=text, bg=self.bg_color, font=('Helvetica', 10, 'bold')).grid(row=i//3, column=(i%3)*2, padx=10, pady=5, sticky='e')
             Entry(input_frame, textvariable=var, font=('Helvetica', 10), width=20).grid(row=i//3, column=(i%3)*2+1, padx=10, pady=5, sticky='w')
 
-        # Modern styled buttons
+        #  style buttons
         buttons = [
             ("Add Customer", self.add_customer),
             ("Update Customer", self.update_customer),
